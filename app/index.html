@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Drug Classification - ML CI/CD</title>
+  <!-- ONNX Runtime Web -->
+  <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/ort.min.js"></script>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --success: #16a34a;
+      --success-bg: #f0fdf4;
+      --warning: #f59e0b;
+      --warning-bg: #fefce8;
+      --error: #dc2626;
+      --error-bg: #fef2f2;
+      --radius: 12px;
+      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 680px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    header h1 {
+      font-size: 1.85rem;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 0.5rem;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      padding: 1.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 1.25rem;
+    }
+
+    .status-loading {
+      background: var(--warning-bg);
+      color: #b45309;
+      border: 1px solid #fde68a;
+    }
+
+    .status-ready {
+      background: var(--success-bg);
+      color: var(--success);
+      border: 1px solid #bbf7d0;
+    }
+
+    .status-error {
+      background: var(--error-bg);
+      color: var(--error);
+      border: 1px solid #fecaca;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .presets-container {
+      margin-bottom: 1.25rem;
+    }
+
+    .presets-label {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-bottom: 0.4rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .preset-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .preset-btn {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      color: #334155;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .preset-btn:hover {
+      background: #e2e8f0;
+      border-color: #94a3b8;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+
+    @media (max-width: 560px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .form-group.full-width {
+      grid-column: span 2;
+    }
+
+    @media (max-width: 560px) {
+      .form-group.full-width {
+        grid-column: span 1;
+      }
+    }
+
+    label {
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #334155;
+    }
+
+    .helper-text {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    input, select {
+      padding: 0.625rem 0.75rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-size: 0.95rem;
+      color: var(--text);
+      background-color: #fff;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    .btn-submit {
+      width: 100%;
+      background: var(--primary);
+      color: #ffffff;
+      padding: 0.75rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.5rem;
+      transition: background-color 0.15s ease;
+    }
+
+    .btn-submit:hover:not(:disabled) {
+      background: var(--primary-hover);
+    }
+
+    .btn-submit:disabled {
+      background: #94a3b8;
+      cursor: not-allowed;
+      opacity: 0.8;
+    }
+
+    #result {
+      display: none;
+      margin-top: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .result-badge {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--primary);
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      padding: 0.35rem 1rem;
+      border-radius: 8px;
+    }
+
+    .confidence-badge {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .probs-breakdown {
+      margin-top: 1rem;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.85rem;
+    }
+
+    .prob-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.45rem;
+      font-size: 0.85rem;
+    }
+
+    .prob-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .prob-bar-container {
+      flex: 1;
+      height: 7px;
+      background: #e2e8f0;
+      border-radius: 4px;
+      margin: 0 0.75rem;
+      overflow: hidden;
+    }
+
+    .prob-bar {
+      height: 100%;
+      background: var(--primary);
+      border-radius: 4px;
+      transition: width 0.3s ease;
+    }
+
+    footer {
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: auto;
+      padding-top: 1.5rem;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Drug Classification</h1>
+      <p>Automated ML CI/CD with In-Browser ONNX Runtime Web Inference</p>
+    </header>
+
+    <div class="card">
+      <div id="status" class="status-badge status-loading">
+        <span class="status-dot"></span>
+        <span id="status-text">Loading ONNX model...</span>
+      </div>
+
+      <!-- Quick presets for testing -->
+      <div class="presets-container">
+        <div class="presets-label">Sample Presets:</div>
+        <div class="preset-pills">
+          <button type="button" class="preset-btn" onclick="applyPreset(23, 'F', 'HIGH', 'HIGH', 25.355)">Sample 1 (drugY)</button>
+          <button type="button" class="preset-btn" onclick="applyPreset(47, 'M', 'LOW', 'HIGH', 10.114)">Sample 2 (drugC)</button>
+          <button type="button" class="preset-btn" onclick="applyPreset(28, 'F', 'NORMAL', 'HIGH', 7.798)">Sample 3 (drugX)</button>
+          <button type="button" class="preset-btn" onclick="applyPreset(43, 'M', 'HIGH', 'HIGH', 13.972)">Sample 4 (drugA)</button>
+          <button type="button" class="preset-btn" onclick="applyPreset(60, 'M', 'NORMAL', 'HIGH', 15.171)">Sample 5 (drugY)</button>
+        </div>
+      </div>
+
+      <form id="predict-form">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="age">Age</label>
+            <input type="number" id="age" name="age" min="10" max="100" value="30" required>
+            <span class="helper-text">Patient age in years</span>
+          </div>
+
+          <div class="form-group">
+            <label for="sex">Sex</label>
+            <select id="sex" name="sex" required>
+              <option value="F">F (Female)</option>
+              <option value="M">M (Male)</option>
+            </select>
+            <span class="helper-text">Biological sex</span>
+          </div>
+
+          <div class="form-group">
+            <label for="bp">Blood Pressure (BP)</label>
+            <select id="bp" name="bp" required>
+              <option value="HIGH">HIGH</option>
+              <option value="NORMAL" selected>NORMAL</option>
+              <option value="LOW">LOW</option>
+            </select>
+            <span class="helper-text">Patient blood pressure level</span>
+          </div>
+
+          <div class="form-group">
+            <label for="cholesterol">Cholesterol</label>
+            <select id="cholesterol" name="cholesterol" required>
+              <option value="HIGH">HIGH</option>
+              <option value="NORMAL" selected>NORMAL</option>
+            </select>
+            <span class="helper-text">Serum cholesterol level</span>
+          </div>
+
+          <div class="form-group full-width">
+            <label for="na_to_k">Sodium to Potassium Ratio (Na_to_K)</label>
+            <input type="number" id="na_to_k" name="na_to_k" min="1" max="50" step="0.001" value="15.000" required>
+            <span class="helper-text">Blood test Na / K ratio (typically between 5 and 40)</span>
+          </div>
+        </div>
+
+        <button type="submit" id="submit-btn" class="btn-submit" disabled>
+          Predict Medication
+        </button>
+
+        <div id="result">
+          <div class="result-header">
+            <div>
+              <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Predicted Medication</div>
+              <div class="result-badge" id="predicted-class">-</div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase;">Confidence</div>
+              <div class="confidence-badge" id="confidence">-</div>
+            </div>
+          </div>
+
+          <div class="probs-breakdown">
+            <div style="font-size: 0.78rem; font-weight: 600; color: #475569; margin-bottom: 0.5rem; text-transform: uppercase;">
+              Class Probability Distribution
+            </div>
+            <div id="prob-bars"></div>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <footer>
+      Educational ML demonstration hosted on Hugging Face Static Spaces.<br>
+      Pipeline powered by Scikit-learn, ONNX Runtime Web, CML, and GitHub Actions.
+    </footer>
+  </div>
+
+  <script>
+    const MODEL_PATHS = ["model/drug_model.onnx", "../model/drug_model.onnx"];
+    let session = null;
+    const CLASSES = ["drugA", "drugB", "drugC", "drugX", "drugY"];
+
+    function applyPreset(age, sex, bp, cholesterol, naToK) {
+      document.getElementById("age").value = age;
+      document.getElementById("sex").value = sex;
+      document.getElementById("bp").value = bp;
+      document.getElementById("cholesterol").value = cholesterol;
+      document.getElementById("na_to_k").value = naToK;
+    }
+
+    async function loadModel() {
+      const statusBadge = document.getElementById("status");
+      const statusText = document.getElementById("status-text");
+      const submitBtn = document.getElementById("submit-btn");
+
+      ort.env.wasm.numThreads = 1;
+
+      for (const modelPath of MODEL_PATHS) {
+        try {
+          session = await ort.InferenceSession.create(modelPath);
+          statusBadge.className = "status-badge status-ready";
+          statusText.textContent = "Model loaded. Ready for inference.";
+          submitBtn.disabled = false;
+          console.log("ONNX model successfully loaded from:", modelPath);
+          return;
+        } catch (err) {
+          console.warn(`Could not load from ${modelPath}:`, err.message);
+        }
+      }
+
+      statusBadge.className = "status-badge status-error";
+      statusText.textContent = "Model file not found. Ensure model/drug_model.onnx is deployed.";
+    }
+
+    async function predict(event) {
+      event.preventDefault();
+      if (!session) return;
+
+      const submitBtn = document.getElementById("submit-btn");
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Predicting...";
+
+      try {
+        const age = Number(document.getElementById("age").value);
+        const sex = document.getElementById("sex").value;
+        const bp = document.getElementById("bp").value;
+        const cholesterol = document.getElementById("cholesterol").value;
+        const naToK = Number(document.getElementById("na_to_k").value);
+
+        // Construct input feeds matching the trained pipeline schema
+        const feeds = {
+          Age: new ort.Tensor("int64", BigInt64Array.from([BigInt(Math.round(age))]), [1, 1]),
+          Sex: new ort.Tensor("string", [sex], [1, 1]),
+          BP: new ort.Tensor("string", [bp], [1, 1]),
+          Cholesterol: new ort.Tensor("string", [cholesterol], [1, 1]),
+          Na_to_K: new ort.Tensor("float64", Float64Array.from([naToK]), [1, 1]),
+        };
+
+        const output = await session.run(feeds);
+
+        // Extract predicted label and probabilities
+        const label = output.label.data[0];
+        const probs = Array.from(output.probabilities.data);
+        const maxProb = Math.max(...probs);
+
+        // Display results
+        document.getElementById("predicted-class").textContent = label;
+        document.getElementById("confidence").textContent = (maxProb * 100).toFixed(2) + "%";
+
+        // Render probability distribution bars
+        const probBarsContainer = document.getElementById("prob-bars");
+        probBarsContainer.innerHTML = "";
+
+        CLASSES.forEach((cls, idx) => {
+          const prob = probs[idx] || 0;
+          const pct = (prob * 100).toFixed(1);
+          const isSelected = cls === label;
+
+          const row = document.createElement("div");
+          row.className = "prob-row";
+          row.innerHTML = `
+            <span style="font-weight: ${isSelected ? '700' : '500'}; color: ${isSelected ? 'var(--primary)' : 'inherit'}; min-width: 50px;">
+              ${cls}
+            </span>
+            <div class="prob-bar-container">
+              <div class="prob-bar" style="width: ${pct}%; background: ${isSelected ? 'var(--primary)' : '#94a3b8'};"></div>
+            </div>
+            <span style="min-width: 45px; text-align: right; color: var(--text-muted); font-size: 0.8rem;">
+              ${pct}%
+            </span>
+          `;
+          probBarsContainer.appendChild(row);
+        });
+
+        document.getElementById("result").style.display = "block";
+      } catch (err) {
+        console.error("Prediction error:", err);
+        alert("An error occurred during prediction: " + err.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Predict Medication";
+      }
+    }
+
+    document.getElementById("predict-form").addEventListener("submit", predict);
+    loadModel();
+  </script>
+</body>
+</html>
