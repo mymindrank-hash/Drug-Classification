@@ -20,6 +20,10 @@ jobs:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           HF_SPACE_ID: ${{ inputs.target_space || secrets.HF_SPACE_ID }}
         run: |
+          if [ -z "$HF_TOKEN" ] || [ -z "$HF_SPACE_ID" ]; then
+            echo "::error title=Missing Secrets::HF_TOKEN or HF_SPACE_ID is not configured. Please configure them in GitHub Secrets or supply target_space in workflow dispatch."
+            exit 1
+          fi
           python -m pip install --upgrade huggingface_hub
           hf auth login --token "$HF_TOKEN"
           hf upload "$HF_SPACE_ID" app/ . \
